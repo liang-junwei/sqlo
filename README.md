@@ -16,6 +16,31 @@ sqlo 是一个 Go 实现的多数据库命令行 SQL 工具，单二进制、零
 
 ---
 
+## 界面展示
+
+> 以下使用 GitHub 支持的静态表格排版实现照片墙效果。
+
+<table>
+  <tr>
+    <td align="center">
+      <img src="./img/powershell-tui-01.png" width="260" alt="TUI 启动" />
+      <br/>TUI 启动（编辑器就绪）
+    </td>
+    <td align="center">
+      <img src="./img/powershell-tui-02.png" width="260" alt="\dt 元命令 · 列出表" />
+      <br/>`\dt` 元命令 · 列出表
+    </td>
+  </tr>
+  <tr>
+    <td align="center" colspan="2">
+      <img src="./img/powershell-tui-03.png" width="520" alt="SQL 查询结果" />
+      <br/>SQL 查询结果（高亮选中行）
+    </td>
+  </tr>
+</table>
+
+---
+
 ## 数据库支持
 
 sqlo 对数据库的支持分为两类：**原生内置驱动**（随二进制一起编译，直接连接）与**兼容协议支持**（通过已有驱动的线协议兼容层连接，无需额外驱动或配置）。
