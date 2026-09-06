@@ -7,31 +7,6 @@ import (
 	"github.com/liang-junwei/sqlo/internal/driver"
 )
 
-// describeArgs 记录各驱动 DescribeTable 需要的参数个数。
-//
-// 既有驱动的 Metadata.DescribeTable 占位符风格与参数个数并不统一：
-//   - postgres / kingbase 用 $1 $2
-//   - mysql / clickhouse 用 ? ?
-//   - sqlserver 用 @p1 @p2
-//   - oracle 用 :1 :2
-//     以上均需要 (schema, table) 两个参数
-//   - tdengine / dameng / sqlite / access 只需要 table 一个参数
-//
-// 这里在 TUI 内部局部适配，不改动驱动层。
-// 若后续在 driver.MetadataQueries 上补充「参数个数」声明，本表即可移除。
-var describeArgs = map[string]int{
-	"postgres":   2,
-	"kingbase":   2,
-	"mysql":      2,
-	"clickhouse": 2,
-	"sqlserver":  2,
-	"oracle":     2,
-	"tdengine":   1,
-	"dameng":     1,
-	"sqlite":     1,
-	"access":     1,
-}
-
 type metaKind int
 
 const (
@@ -76,7 +51,7 @@ const metaHelpText = `元命令
   超出会截断并显示真实总行数。结果仅以表格形式展示。`
 
 // parseMeta 解析以反斜杠开头的元命令
-func parseMeta(line, drvType, currentDB string) (metaAction, error) {
+func parseMeta(line, drvType, currentDB, currentUser string) (metaAction, error) {
 	s := strings.TrimSpace(line)
 	if !strings.HasPrefix(s, "\\") {
 		return metaAction{kind: metaNone}, nil
@@ -117,7 +92,7 @@ func parseMeta(line, drvType, currentDB string) (metaAction, error) {
 	case "c", "connect":
 		return metaAction{kind: metaSwitch, text: arg}, nil
 	case "dt":
-		return metaQueryAction(drvType, func(md driver.MetadataQueries) string { return md.ListTables })
+		return listTablesAction(drvType, currentDB, currentUser)
 	case "dn":
 		return metaQueryAction(drvType, func(md driver.MetadataQueries) string { return md.ListSchemas })
 	case "l":
@@ -142,61 +117,24 @@ func metaQueryAction(drvType string, pick func(driver.MetadataQueries) string) (
 	return metaAction{kind: metaQuery, query: q}, nil
 }
 
-// describeOwnerAware 标记“1 参数驱动里，\d <schema>.<表> 显式带 schema 时
-// 需要把 schema 当作 owner/namespace 一并传入过滤”的驱动。
-//
-// 这类驱动的 DescribeTable 模板原本只用 table_name 过滤（如 dameng 的
-// all_tab_columns WHERE table_name = ?）。若 \d 时丢弃 schema，只按表名查，
-// 该表在多个 owner 下可见时元数据查询会返回重复行（每个可见 owner 一份），
-// 表现为“每个字段重复 N 次”。这里在显式给出 schema 时注入 owner 过滤，
-// 既消除重复，又保留“\d <表>（不带 schema）”的原有行为不变。
-var describeOwnerAware = map[string]bool{
-	"dameng": true,
-}
-
-// describeAction 构造表结构查询，按驱动决定参数个数
+// describeAction 构造表结构查询。
+// 参数个数、占位符风格、owner 过滤等驱动差异已下沉到 driver.BuildDescribe，
+// 这里只做 TUI 侧的封装（\d 与 sqlo describe 共用同一套逻辑）。
 func describeAction(drvType, currentDB, target string) (metaAction, error) {
-	drv, err := driver.Get(drvType)
+	q, args, err := driver.BuildDescribe(drvType, currentDB, target)
 	if err != nil {
 		return metaAction{}, err
 	}
-	q := strings.TrimSpace(drv.Metadata.DescribeTable)
-	if q == "" {
-		return metaAction{}, fmt.Errorf("数据库类型 %s 未提供表结构查询", drvType)
-	}
-
-	// 不带表名时退化为列出表，避免用户面对未知的参数个数要求
-	if target == "" {
-		return metaQueryAction(drvType, func(md driver.MetadataQueries) string { return md.ListTables })
-	}
-
-	schema, table := splitQualified(target)
-
-	if describeArgs[drvType] == 1 {
-		// dameng 显式带 schema 时，注入 owner 过滤以避免多 owner 下重复行
-		if describeOwnerAware[drvType] && schema != "" {
-			q = strings.Replace(q, "table_name = ?", "owner = ? AND table_name = ?", 1)
-			return metaAction{kind: metaQuery, query: q, args: []interface{}{schema, table}}, nil
-		}
-		return metaAction{kind: metaQuery, query: q, args: []interface{}{table}}, nil
-	}
-
-	// 需要 (schema, table) 两个参数
-	if schema == "" {
-		if currentDB == "" {
-			return metaAction{}, fmt.Errorf("该库需要 schema，请用 \\d <schema>.<表>（当前连接未指定数据库）")
-		}
-		schema = currentDB
-	}
-
-	return metaAction{kind: metaQuery, query: q, args: []interface{}{schema, table}}, nil
+	return metaAction{kind: metaQuery, query: q, args: args}, nil
 }
 
-// splitQualified 拆分 "schema.table"，兼容引号包裹
-func splitQualified(name string) (schema, table string) {
-	name = strings.TrimSpace(name)
-	if i := strings.LastIndex(name, "."); i > 0 {
-		return strings.Trim(name[:i], "\"'"), strings.Trim(name[i+1:], "\"'")
+// listTablesAction 构造"列出表"查询。
+// 参数个数、占位符风格等驱动差异已下沉到 driver.BuildListTables，
+// 这里只做 TUI 侧的封装（\dt 与 sqlo tables 共用同一套逻辑）。
+func listTablesAction(drvType, currentDB, currentUser string) (metaAction, error) {
+	q, args, err := driver.BuildListTables(drvType, currentDB, currentUser)
+	if err != nil {
+		return metaAction{}, err
 	}
-	return "", name
+	return metaAction{kind: metaQuery, query: q, args: args}, nil
 }

@@ -2,51 +2,43 @@ package cmd
 
 import (
 	"fmt"
-	"os"
-	"sort"
+	"strings"
 
 	"github.com/liang-junwei/sqlo/internal/driver"
-	"github.com/liang-junwei/sqlo/internal/output"
 	"github.com/spf13/cobra"
 )
 
 var databasesCmd = &cobra.Command{
-	Use:     "databases",
-	Aliases: []string{"dbs"},
-	Short:   "列出当前支持的数据库类型",
-	Long: `列出 sqlo 当前已编译支持的所有数据库类型及其默认端口。
+	Use:   "databases",
+	Short: "列出服务器上的数据库",
+	Long: `列出当前连接服务器上的数据库，使用驱动自带的元数据查询。
 
-该列表由驱动注册表在运行时动态生成，始终与可执行文件实际支持的数据库保持一致，
-不再依赖命令帮助文本中的硬编码枚举。可用 -o 指定输出格式 (table/json/yaml/csv)。`,
+注意与 sqlo drivers 区分：
+  sqlo drivers   —— sqlo 支持哪些数据库驱动类型（离线，不需要连接）
+  sqlo databases —— 当前连的这台服务器上有哪些库（需要连接）
+
+示例:
+  sqlo databases
+  sqlo databases -o json
+  sqlo databases -S prod-pg`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		names := driver.List()
-		sort.Strings(names)
-
-		rows := make([][]interface{}, 0, len(names))
-		for _, name := range names {
-			drv, err := driver.Get(name)
-			if err != nil {
-				// 注册表与 Get 应保持一致；异常时跳过该条目而非中断
-				continue
-			}
-			port := "-"
-			if drv.DefaultPort > 0 {
-				port = fmt.Sprintf("%d", drv.DefaultPort)
-			}
-			rows = append(rows, []interface{}{name, port})
+		conn, ctx, err := connectForMeta("")
+		if err != nil {
+			return err
 		}
+		defer conn.Close()
 
-		format := GetOutputFormat()
-		formatter, err := output.GetFormatter(format)
+		drv, err := driver.Get(ctx.Type)
 		if err != nil {
 			return err
 		}
 
-		result := &output.QueryResult{
-			Columns: []string{"TYPE", "DEFAULT_PORT"},
-			Rows:    rows,
+		q := strings.TrimSpace(drv.Metadata.ListDatabases)
+		if q == "" {
+			return fmt.Errorf("数据库类型 %s 未提供列库查询", ctx.Type)
 		}
-		return formatter.Format(os.Stdout, result)
+
+		return runMetaQuery(conn, q, nil)
 	},
 }
 

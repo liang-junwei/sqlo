@@ -11,6 +11,9 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// execRowLimit 结果集最大返回行数（仅 exec 命令支持，0 表示无限制）
+var execRowLimit int
+
 var execCmd = &cobra.Command{
 	Use:   "exec [sql]",
 	Short: "执行 SQL 语句",
@@ -79,6 +82,7 @@ func init() {
 	execCmd.Flags().StringP("file", "f", "", "从文件读取 SQL 执行")
 	execCmd.Flags().StringP("database", "d", "", "临时切换数据库（不修改配置文件）")
 	execCmd.Flags().StringSlice("opt", nil, "运行时临时覆盖连接参数 (key=value),可多次指定或逗号分隔")
+	execCmd.Flags().IntVar(&execRowLimit, "row-limit", 500, "结果集最大返回行数，0 表示无限制")
 
 	rootCmd.AddCommand(execCmd)
 }
@@ -130,9 +134,17 @@ func executeQueryWithResult(conn *sql.DB, sqlText string) error {
 		return fmt.Errorf("获取列信息失败: %w", err)
 	}
 
-	// 读取所有行
+	// 读取所有行，超过 --row-limit 时提前中止，避免大结果集全量拉取
+	maxRows := execRowLimit
 	var resultRows [][]interface{}
+	truncated := false
 	for rows.Next() {
+		// 已取满则停止扫描（此时不再 Scan 该行）
+		if maxRows > 0 && len(resultRows) >= maxRows {
+			truncated = true
+			break
+		}
+
 		// 创建值切片
 		values := make([]interface{}, len(columns))
 		valuePtrs := make([]interface{}, len(columns))
@@ -176,7 +188,12 @@ func executeQueryWithResult(conn *sql.DB, sqlText string) error {
 	}
 
 	// 输出结果
-	return formatter.Format(os.Stdout, result)
+	if err := formatter.Format(os.Stdout, result); err != nil {
+		return err
+	}
+
+	warnTruncated(maxRows, truncated)
+	return nil
 }
 
 // executeExec 执行非查询语句

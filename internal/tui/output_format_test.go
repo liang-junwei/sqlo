@@ -17,7 +17,7 @@ func TestMetaOutputFormat(t *testing.T) {
 		{`\o bogus`, metaNone, "", true},
 	}
 	for _, c := range cases {
-		act, err := parseMeta(c.line, "mysql", "test")
+		act, err := parseMeta(c.line, "mysql", "test", "")
 		if c.wantErr {
 			if err == nil {
 				t.Errorf("%q: 期望解析错误，实际无错误", c.line)

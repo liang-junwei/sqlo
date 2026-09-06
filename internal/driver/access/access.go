@@ -14,6 +14,9 @@ func init() {
 			ListSchemas:   `SELECT 'default'`,
 			ListDatabases: `SELECT 'default'`,
 			DescribeTable: `SELECT ColumnName, TypeName, Nullable, ColumnDefault FROM MSysColumns WHERE TableName = ? ORDER BY OrdinalPosition`,
+
+			// DescribeTable 只需 table 一个参数
+			DescribeParamCount: 1,
 		},
 		Features: driver.Features{
 			Transactions: true,

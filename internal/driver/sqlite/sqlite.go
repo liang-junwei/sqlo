@@ -14,6 +14,9 @@ func init() {
 			ListSchemas:   `SELECT 'main'`, // SQLite 只有一个 main schema
 			ListDatabases: `SELECT name FROM pragma_database_list ORDER BY seq`,
 			DescribeTable: `SELECT name, type, "notnull", dflt_value, pk FROM pragma_table_info(?) ORDER BY cid`,
+
+			// DescribeTable 只需 table 一个参数
+			DescribeParamCount: 1,
 		},
 		Features: driver.Features{
 			Transactions: true,

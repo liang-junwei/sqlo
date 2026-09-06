@@ -17,6 +17,11 @@ func init() {
 			ListSchemas:   `SELECT name FROM information_schema.ins_databases ORDER BY name`,
 			ListDatabases: `SELECT name FROM information_schema.ins_databases ORDER BY name`,
 			DescribeTable: `SELECT column_name AS name, data_type AS type FROM information_schema.ins_columns WHERE table_name = ? ORDER BY column_id`,
+
+			// DescribeTable 只需 table 一个参数
+			DescribeParamCount: 1,
+			// ListTables 的 db_name=? 需要 1 个参数（当前数据库）
+			ListTablesParamCount: 1,
 		},
 		Features: driver.Features{
 			Transactions: false, // TDengine 不支持多语句事务

@@ -21,10 +21,10 @@ var rootCmd = &cobra.Command{
 	Short: "SQL CLI - 多数据库命令行工具",
 	Long: `sqlo 是一个支持多种数据库的命令行 SQL 工具。
 
-通过 connect 命令管理数据库连接，使用 query 命令执行 SQL。`,
+通过 connect 命令管理数据库连接，使用 exec 命令执行 SQL。`,
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-		// version 与 databases 不需要加载用户配置
-		if cmd.Name() == "version" || cmd.Name() == "databases" {
+		// version 与 drivers 不需要加载用户配置（都是离线信息）
+		if cmd.Name() == "version" || cmd.Name() == "drivers" {
 			return nil
 		}
 

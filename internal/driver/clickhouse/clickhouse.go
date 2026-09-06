@@ -14,6 +14,9 @@ func init() {
 			ListSchemas:   `SELECT name FROM system.databases ORDER BY name`,
 			ListDatabases: `SELECT name FROM system.databases ORDER BY name`,
 			DescribeTable: `SELECT name, type, default_expression, comment FROM system.columns WHERE database = ? AND table = ? ORDER BY position`,
+
+			// DescribeTable 需要 (schema, table) 两个参数
+			DescribeParamCount: 2,
 		},
 		Features: driver.Features{
 			Transactions: false, // ClickHouse 多数表引擎不支持事务

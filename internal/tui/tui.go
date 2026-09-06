@@ -382,7 +382,7 @@ func runStatements(ctx context.Context, conn *sql.DB, stmts []string) tea.Msg {
 
 // runMeta 处理元命令（纯业务：\? 帮助、\clear、\c 切换、\dt/\d 元查询）
 func (m Model) runMeta(line string) (tea.Model, tea.Cmd) {
-	act, err := parseMeta(line, m.info.Type, m.info.Database)
+	act, err := parseMeta(line, m.info.Type, m.info.Database, m.info.Username)
 	if err != nil {
 		m.errText = err.Error()
 		return m, nil

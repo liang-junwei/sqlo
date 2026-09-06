@@ -14,6 +14,9 @@ func init() {
 			ListSchemas:   `SELECT schema_name FROM information_schema.schemata ORDER BY schema_name`,
 			ListDatabases: `SELECT datname FROM pg_database WHERE datistemplate = false ORDER BY datname`,
 			DescribeTable: `SELECT column_name, data_type, is_nullable, column_default FROM information_schema.columns WHERE table_schema = $1 AND table_name = $2 ORDER BY ordinal_position`,
+
+			// DescribeTable 需要 (schema, table) 两个参数
+			DescribeParamCount: 2,
 		},
 		Features: driver.Features{
 			Transactions: true,

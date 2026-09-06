@@ -21,6 +21,11 @@ func init() {
 			ListSchemas:   `SELECT username FROM all_users ORDER BY username`,
 			ListDatabases: `SELECT name FROM v$database`,
 			DescribeTable: `SELECT column_name AS name, data_type AS type FROM all_tab_columns WHERE table_name = ? ORDER BY column_id`,
+
+			// DescribeTable 只需 table 一个参数
+			DescribeParamCount: 1,
+			// ListTables 的 owner=? 需要 1 个参数（当前连接用户名）
+			ListTablesParamCount: 1,
 		},
 		Features: driver.Features{
 			Transactions: true,  // 达梦支持事务

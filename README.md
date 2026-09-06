@@ -8,9 +8,9 @@
 
 ## 简介
 
-sqlo 是一个 Go 实现的多数据库命令行 SQL 工具，单二进制、零依赖、跨平台。支持主流关系型与国产数据库；Ai Agent友好，多连接管理命令行无缝切换，支持命令行 SQL 执行与文件批量导入；自带 TUI 支持垂直/水平滚动，视觉内容不混乱。所有驱动均为纯 Go 实现，无CGO依赖。
+sqlo 是一个 Go 实现的多数据库命令行 SQL 工具，单二进制、零依赖、跨平台。支持主流关系型与国产数据库；AI Agent 友好，多连接管理命令行无缝切换，支持命令行 SQL 执行与文件批量导入；自带 TUI 支持垂直/水平滚动，视觉内容不混乱。所有驱动均为纯 Go 实现，无 CGO 依赖。
 
-> **数据库支持**：MySQL / Oracle / PostgreSQL / SQL Server / SQLite / ClickHouose，国产化数据库（达梦 / 人大金仓 / TDengine / TiDB / OceanBase / PolarDB / GaussDB / TDSQL 等）详见下方「数据库支持」章节。
+> **数据库支持**：MySQL / Oracle / PostgreSQL / SQL Server / SQLite / ClickHouse，国产化数据库（达梦 / 人大金仓 / TDengine / TiDB / OceanBase / PolarDB / GaussDB / TDSQL 等）详见下方「数据库支持」章节。
 
 > **零 CGO**：默认构建（CGO_ENABLED=0）即可生成独立二进制，无需目标机器安装数据库客户端库。其中 SQLite 使用 modernc.org/sqlite，MS Access 使用 Windows ODBC syscall（仅 Windows 可用），达梦/金仓为官方便携 Go 驱动，均不依赖原生库。
 
@@ -47,7 +47,7 @@ sqlo 对数据库的支持分为两类：**原生内置驱动**（随二进制�
 
 ### 原生内置驱动
 
-以下数据库通过 sqlo 内置的纯 Go 驱动直接连接，完整列表由 `sqlo databases` 运行时动态生成：
+以下数据库通过 sqlo 内置的纯 Go 驱动直接连接，完整列表由 `sqlo drivers` 运行时动态生成：
 
 | 数据库            | 类型标识     | 驱动包                                                                  | 说明                              |
 | ----------------- | ------------ | ----------------------------------------------------------------------- | --------------------------------- |
@@ -126,21 +126,48 @@ sqlo connect add -n dev-mysql -t mysql -H 127.0.0.1 -u root -p pass -d test --de
 | `--quiet`   | `-q` | 静默模式，仅输出结果                                        |
 | `--verbose` | `-v` | 详细输出                                                    |
 
+> 行数限制 `--row-limit` **仅 `exec` 命令支持**（见下文）；探查命令 `tables` / `describe` 不受限。
+
 ---
 
 ## 命令概览
 
-| 分类 | 命令        | 别名  | 说明                                              |
-| ---- | ----------- | ----- | ------------------------------------------------- |
-| 配置 | `connect`   |       | 管理数据库连接配置（add/list/use/delete/show）    |
-| 执行 | `exec`      |       | 执行单条 SQL（支持 -e 内联 / -f 文件 / 位置参数） |
-| 会话 | `tui`       |       | 启动交互式 TUI 会话（保持会话态）                 |
-| 信息 | `databases` | `dbs` | 列出当前支持的数据库类型及默认端口                |
-| 信息 | `version`   |       | 显示版本信息                                      |
+| 分类 | 命令        | 别名   | 说明                                              |
+| ---- | ----------- | ------ | ------------------------------------------------- |
+| 配置 | `connect`   |        | 管理数据库连接配置（add/list/use/delete/show）    |
+| 执行 | `exec`      |        | 执行单条 SQL（支持 -e 内联 / -f 文件 / 位置参数） |
+| 会话 | `tui`       |        | 启动交互式 TUI 会话（保持会话态）                 |
+| 探查 | `databases` |        | 列出**服务器上的**数据库（需连接）                |
+| 探查 | `tables`    |        | 列出当前库的表（需连接）                          |
+| 探查 | `describe`  | `desc` | 查看表结构（需连接，等同 TUI 的 `\d`）            |
+| 信息 | `drivers`   |        | 列出 sqlo 支持的驱动类型及默认端口（离线）        |
+| 信息 | `version`   |        | 显示版本信息                                      |
+
+> `databases` 与 `drivers` 的区别：`drivers` 是「sqlo 支持哪些数据库类型」（离线，不需要连接）；`databases` 是「当前连的这台服务器上有哪些库」（需要连接）。
 
 ---
 
 ## 典型用法
+
+### 探查库表结构（databases / tables / describe）
+
+无需记忆各数据库的系统表方言——sqlo 用每个驱动自带的元数据查询，命令在所有数据库上写法一致：
+
+```bash
+sqlo databases                    # 这台服务器上有哪些库
+sqlo tables                       # 当前库有哪些表
+sqlo describe users               # 查看 users 表结构
+sqlo describe public.users        # postgres/mysql/oracle 等需 schema 的库可显式带
+sqlo describe users -o json       # 结构化输出，便于脚本 / AI 解析
+sqlo describe                     # 不带表名时退化为列出表，等同 sqlo tables
+
+# 指定连接 / 临时切库
+sqlo tables -S prod-pg -o json
+sqlo tables -d other_db
+```
+
+> **说明**：`dameng` / `tdengine` 的 ListTables 模板带 `?` 占位符（分别是 owner / db_name），
+> 已由 `BuildListTables` 自动注入当前连接用户名 / 当前库，`sqlo tables` 与 TUI 的 `\dt` 在这两个驱动上正常工作。
 
 ### 执行 SQL（exec）
 
@@ -166,7 +193,13 @@ sqlo exec -d other_db -e "SELECT * FROM users"
 # 运行时临时覆盖连接参数
 sqlo exec --opt sslmode=disable -e "SELECT 1"
 sqlo exec --opt "timeout=30,sslmode=require" -e "SELECT 1"
+
+# 限制返回行数（仅 exec 支持，默认 500；0 表示无限制）
+sqlo exec -S dev-mysql -e "SELECT * FROM big_table" --row-limit 100
+sqlo exec -S dev-mysql -e "SELECT * FROM big_table" --row-limit 0   # 关闭上限
 ```
+
+> `exec` 的 `--row-limit` 默认 `500`，超过则截断，截断提示写 stderr（stdout 的 `json` / `csv` 仍可直接解析）。`tables` / `describe` 等探查命令不受此限制。
 
 ### 交互式会话（tui）
 
@@ -281,14 +314,18 @@ sqlo/
 ├── cmd/                 # CLI 命令定义
 │   ├── root.go          # 根命令 + 全局 flags (-S/-o/-q/-v)
 │   ├── connect.go       # 连接配置管理 (add/list/use/delete/show)
-│   ├── exec.go          # 执行 SQL（查询 / 非查询分派）
+│   ├── exec.go          # 执行 SQL（查询 / 非查询分派 + --row-limit 截断，仅本命令）
 │   ├── tui.go           # 交互式 TUI 启动与行内直连
-│   ├── databases.go     # 列出支持的数据库类型
+│   ├── databases.go     # 列出当前服务器上的数据库（需连接）
+│   ├── drivers.go       # 列出 sqlo 支持的驱动类型及默认端口（离线）
+│   ├── tables.go        # 列出当前库的表（复用 driver.BuildListTables）
+│   ├── describe.go      # 查看表结构（复用 driver.BuildDescribe，等同 TUI \d）
+│   ├── introspect.go    # 内省命令共享辅助（连接/查询/-o 输出）
 │   └── version.go       # 版本信息
 ├── internal/            # 私有包（Go 编译器强制，外部不可 import）
 │   ├── config/          # 配置持久化 (~/.sqlo.json)
 │   ├── db/              # 连接层（DSN 构建 + Connect/ConnectContext）
-│   ├── driver/          # 驱动注册机制 + 各数据库驱动
+│   ├── driver/          # 驱动注册机制 + 各数据库驱动 + BuildDescribe + BuildListTables
 │   ├── output/          # 输出格式化 (table/json/yaml/csv)
 │   └── tui/             # 交互式界面 (bubbletea + bubbles + lipgloss)
 ├── third_party/         # 本地引入的第三方驱动 (dm / gokb)

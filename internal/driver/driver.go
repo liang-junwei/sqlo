@@ -27,6 +27,17 @@ type MetadataQueries struct {
 	ListSchemas  string
 	ListDatabases string
 	DescribeTable string
+
+	// DescribeParamCount 声明 DescribeTable 需要的参数个数：
+	// 1 = 只需 table；2 = 需要 (schema, table)。
+	// 各驱动的占位符风格与参数个数并不统一（$1 $2 / ? ? / @p1 @p2 / :1 :2），
+	// 这里只声明个数，具体占位符写在 SQL 模板里。
+	DescribeParamCount int
+
+	// ListTablesParamCount 声明 ListTables 需要的参数个数：
+	// 0 = 无需参数（大多数驱动）；1 = 需要 1 个参数。
+	// 仅 dameng（owner=?）与 tdengine（db_name=?）为 1，参数含义见 BuildListTables。
+	ListTablesParamCount int
 }
 
 // Features 声明驱动支持的特性

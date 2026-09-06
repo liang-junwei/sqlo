@@ -14,6 +14,9 @@ func init() {
 			ListSchemas:   `SELECT SCHEMA_NAME FROM INFORMATION_SCHEMA.SCHEMATA ORDER BY SCHEMA_NAME`,
 			ListDatabases: `SELECT name FROM sys.databases WHERE name NOT IN ('master', 'tempdb', 'model', 'msdb') ORDER BY name`,
 			DescribeTable: `SELECT COLUMN_NAME, DATA_TYPE, IS_NULLABLE, COLUMN_DEFAULT FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = @p1 AND TABLE_NAME = @p2 ORDER BY ORDINAL_POSITION`,
+
+			// DescribeTable 需要 (schema, table) 两个参数
+			DescribeParamCount: 2,
 		},
 		Features: driver.Features{
 			Transactions: true,

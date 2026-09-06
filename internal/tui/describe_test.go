@@ -24,7 +24,7 @@ import (
 // 必须把 schema 作为 owner 一并传入过滤，否则只按表名查会在多 owner 下返回
 // 重复行（表现为每个字段重复 N 次）。
 func TestDamengDescribeOwnerAware(t *testing.T) {
-	act, err := parseMeta(`\d SYSDBA.T1`, "dameng", "")
+	act, err := parseMeta(`\d SYSDBA.T1`, "dameng", "", "")
 	if err != nil {
 		t.Fatalf("parseMeta 失败: %v", err)
 	}
@@ -43,7 +43,7 @@ func TestDamengDescribeOwnerAware(t *testing.T) {
 
 // TestDamengDescribeNoSchemaUnchanged 确保不带 schema 时行为不变（仍按表名查）。
 func TestDamengDescribeNoSchemaUnchanged(t *testing.T) {
-	act, err := parseMeta(`\d T1`, "dameng", "")
+	act, err := parseMeta(`\d T1`, "dameng", "", "")
 	if err != nil {
 		t.Fatalf("parseMeta 失败: %v", err)
 	}
@@ -58,7 +58,7 @@ func TestDamengDescribeNoSchemaUnchanged(t *testing.T) {
 // TestOtherOneArgDriversUnchanged sqlite/tdengine/access 保持单参数，不被 owner 逻辑影响。
 func TestOtherOneArgDriversUnchanged(t *testing.T) {
 	for _, dt := range []string{"sqlite", "tdengine", "access"} {
-		act, err := parseMeta(`\d main.users`, dt, "")
+		act, err := parseMeta(`\d main.users`, dt, "", "")
 		if err != nil {
 			t.Fatalf("%s parseMeta 失败: %v", dt, err)
 		}
@@ -71,7 +71,7 @@ func TestOtherOneArgDriversUnchanged(t *testing.T) {
 // TestTwoArgDriversPassSchemaTable 2 参数驱动（postgres 等）必须 (schema, table)。
 func TestTwoArgDriversPassSchemaTable(t *testing.T) {
 	for _, dt := range []string{"postgres", "kingbase", "mysql", "clickhouse", "sqlserver", "oracle"} {
-		act, err := parseMeta(`\d public.users`, dt, "")
+		act, err := parseMeta(`\d public.users`, dt, "", "")
 		if err != nil {
 			t.Fatalf("%s parseMeta 失败: %v", dt, err)
 		}

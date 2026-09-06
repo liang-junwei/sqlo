@@ -14,6 +14,9 @@ func init() {
 			ListSchemas:   `SELECT schema_name FROM information_schema.schemata WHERE schema_name NOT IN ('mysql', 'information_schema', 'performance_schema', 'sys') ORDER BY schema_name`,
 			ListDatabases: `SELECT schema_name FROM information_schema.schemata ORDER BY schema_name`,
 			DescribeTable: `SELECT column_name, data_type, is_nullable, column_default, column_key, extra FROM information_schema.columns WHERE table_schema = ? AND table_name = ? ORDER BY ordinal_position`,
+
+			// DescribeTable 需要 (schema, table) 两个参数
+			DescribeParamCount: 2,
 		},
 		Features: driver.Features{
 			Transactions: true,
