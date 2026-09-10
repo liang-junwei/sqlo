@@ -22,7 +22,7 @@ var connectAddCmd = &cobra.Command{
 	Short: "添加新的数据库连接",
 	Long: `添加新的数据库连接配置并保存到 ~/.sqlo.json。
 
-支持的全部数据库类型及默认端口，请用 'sqlo databases' 查看。
+支持的全部数据库类型及默认端口，请用 'sqlo drivers' 查看。
 
 示例:
   # 网络型数据库（典型）
@@ -57,7 +57,7 @@ var connectAddCmd = &cobra.Command{
 		}
 
 		if dbType == "" {
-			return fmt.Errorf("数据库类型不能为空 (使用 -t 指定，可用 'sqlo databases' 查看支持的类型)")
+			return fmt.Errorf("数据库类型不能为空 (使用 -t 指定，可用 'sqlo drivers' 查看支持的类型)")
 		}
 
 		// 根据数据库类型区分网络型和文件型
@@ -227,7 +227,7 @@ var connectShowCmd = &cobra.Command{
 func init() {
 	// connect add 参数
 	connectAddCmd.Flags().StringP("name", "n", "", "连接名称 (必填)")
-	connectAddCmd.Flags().StringP("type", "t", "", "数据库类型 (必填，可用 'sqlo databases' 查看支持的类型)")
+	connectAddCmd.Flags().StringP("type", "t", "", "数据库类型 (必填，可用 'sqlo drivers' 查看支持的类型)")
 	connectAddCmd.Flags().StringP("host", "H", "", "主机地址 (必填)")
 	connectAddCmd.Flags().IntP("port", "P", 0, "端口 (默认根据类型自动推断)")
 	connectAddCmd.Flags().StringP("username", "u", "", "用户名 (必填)")
